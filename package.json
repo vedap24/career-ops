@@ -1,0 +1,20 @@
+{
+  "name": "career-ops-mvp",
+  "version": "1.0.0",
+  "description": "AI-powered job evaluation and resume tailoring — paste a URL, get a breakdown.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.js",
+    "start": "NODE_ENV=production node server/index.js"
+  },
+  "keywords": ["career", "ai", "job-search", "resume", "evaluation"],
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@mozilla/readability": "^0.5.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "linkedom": "^0.18.0",
+    "marked": "^15.0.0"
+  }
+}
