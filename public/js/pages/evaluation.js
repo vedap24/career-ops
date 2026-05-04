@@ -81,15 +81,88 @@ const EvaluationPage = {
     return html;
   },
 
+  _evalQuotes: [
+    { text: "The best way to predict the future is to invent it.", author: "Alan Kay" },
+    { text: "AI is the new electricity.", author: "Andrew Ng" },
+    { text: "Talk is cheap. Show me the code.", author: "Linus Torvalds" },
+    { text: "Stay hungry, stay foolish.", author: "Steve Jobs" },
+    { text: "In God we trust; all others must bring data.", author: "W. Edwards Deming" },
+    { text: "Simplicity is the ultimate sophistication.", author: "Leonardo da Vinci" },
+    { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
+  ],
+  _quoteTimer: null,
+
   async runEval(id) {
-    const btn = document.getElementById('run-eval-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Evaluating...'; }
+    const c = document.getElementById('eval-page');
+    const randomQuote = () => this._evalQuotes[Math.floor(Math.random() * this._evalQuotes.length)];
+    const q = randomQuote();
+
+    // Show loading overlay with quotes
+    c.innerHTML = `
+      <div class="card" style="text-align:center;padding:40px 24px;max-width:560px;margin:40px auto">
+        <div class="spinner" style="width:36px;height:36px;border-width:3px;margin:0 auto 20px"></div>
+        <h3 style="font-family:var(--font-heading);font-size:1.1rem;margin-bottom:8px;color:var(--teal-bright)">
+          🤖 Evaluating your opportunity...
+        </h3>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:24px">
+          This takes 30–60 seconds. Sit tight!
+        </p>
+        <div style="border-top:1px solid var(--border-subtle);padding-top:20px;min-height:80px">
+          <p style="font-size:1rem;font-style:italic;color:var(--text-secondary);margin-bottom:8px;line-height:1.6;transition:opacity 0.3s" id="eq-text">
+            "${q.text}"
+          </p>
+          <p style="font-size:0.8rem;color:var(--text-muted);transition:opacity 0.3s" id="eq-author">— ${q.author}</p>
+        </div>
+      </div>`;
+
+    // Rotate quotes
+    this._quoteTimer = setInterval(() => {
+      const nq = randomQuote();
+      const t = document.getElementById('eq-text');
+      const a = document.getElementById('eq-author');
+      if (t && a) {
+        t.style.opacity = '0'; a.style.opacity = '0';
+        setTimeout(() => {
+          t.textContent = `"${nq.text}"`; a.textContent = `— ${nq.author}`;
+          t.style.opacity = '1'; a.style.opacity = '1';
+        }, 300);
+      }
+    }, 5000);
+
     try {
-      Toast.info('Evaluating... ~30-60s');
       await API.evaluateJob(id);
-      Toast.success('Done!');
+      clearInterval(this._quoteTimer);
+      Toast.success('Evaluation complete!');
       this.init(id);
-    } catch (err) { Toast.error(err.message); if (btn) { btn.disabled = false; btn.innerHTML = '🤖 Evaluate'; } }
+    } catch (err) {
+      clearInterval(this._quoteTimer);
+
+      if (err.message?.includes('rate limit') || err.message?.includes('429')) {
+        const rq = randomQuote();
+        c.innerHTML = `
+          <div class="card" style="text-align:center;padding:40px 24px;max-width:560px;margin:40px auto">
+            <div style="font-size:2.5rem;margin-bottom:12px">☕</div>
+            <h3 style="font-family:var(--font-heading);font-size:1.1rem;margin-bottom:8px;color:var(--amber)">
+              Rate Limit Reached
+            </h3>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:8px">
+              Gemini API is cooling down. This usually resets in about a minute.
+            </p>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:20px">
+              Grab a coffee and try again shortly ☕
+            </p>
+            <div style="border-top:1px solid var(--border-subtle);padding-top:20px;min-height:80px">
+              <p style="font-size:1rem;font-style:italic;color:var(--text-secondary);margin-bottom:8px;line-height:1.6">"${rq.text}"</p>
+              <p style="font-size:0.8rem;color:var(--text-muted)">— ${rq.author}</p>
+            </div>
+            <button class="btn btn-primary" style="margin-top:20px" onclick="EvaluationPage.runEval(${id})">🔄 Try Again</button>
+            <button class="btn btn-ghost" style="margin-top:8px" onclick="EvaluationPage.init(${id})">← Back to Job</button>
+          </div>`;
+      } else {
+        Toast.error(err.message);
+        this.init(id);
+      }
+    }
   },
 
   async deleteJob(id) {

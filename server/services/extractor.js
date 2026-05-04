@@ -44,6 +44,11 @@ export async function extractFromUrl(url) {
       content = fallbackExtract(document);
     }
 
+    // Clean up extracted JD text
+    if (content) {
+      content = cleanJdText(content);
+    }
+
     return {
       title,
       company,
@@ -205,3 +210,66 @@ function cleanTitle(raw) {
     .trim()
     .slice(0, 200);                   // Cap at 200 chars
 }
+
+/**
+ * Clean up extracted JD text — remove portal noise, ads, excessive whitespace.
+ */
+function cleanJdText(text) {
+  if (!text) return text;
+
+  // Lines to strip: portal boilerplate, share buttons, ads, cookie notices
+  const junkPatterns = [
+    /^share\s*(this\s*)?(job|role|position)?[\s:]*$/i,
+    /^(share|tweet|post)\s*(on|to|via)\s*(linkedin|twitter|facebook|x\.com)/i,
+    /^apply\s*(now|here|today|for this)/i,
+    /^(click|tap)\s*(here\s*)?to\s*apply/i,
+    /^back to (all )?(jobs|openings|careers|positions|search)/i,
+    /^(cookie|privacy)\s*(policy|notice|settings|preferences)/i,
+    /^we use cookies/i,
+    /^(accept|reject)\s*(all\s*)?(cookies)?$/i,
+    /^subscribe to/i,
+    /^sign up for/i,
+    /^(follow us|connect with us|join our)/i,
+    /^(copyright|©|\(c\))\s*\d{4}/i,
+    /^all rights reserved/i,
+    /^powered by\s*(lever|greenhouse|ashby|workday|icims|taleo)/i,
+    /^\s*\|\s*$/,
+    /^(share|save|print|email)\s*$/i,
+    /^similar (jobs|roles|positions)/i,
+    /^you may also (like|be interested)/i,
+    /^related (jobs|openings)/i,
+    /^other (jobs|openings) at/i,
+    /^advertisement/i,
+    /^sponsored/i,
+  ];
+
+  let lines = text.split('\n');
+
+  // Filter out junk lines
+  lines = lines.filter(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return true; // keep blank lines for now, collapse later
+    return !junkPatterns.some(p => p.test(trimmed));
+  });
+
+  let cleaned = lines.join('\n');
+
+  // Collapse 3+ consecutive blank lines into 2
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  // Remove leading/trailing whitespace on each line
+  cleaned = cleaned
+    .split('\n')
+    .map(l => l.trimEnd())
+    .join('\n');
+
+  // Trim overall
+  cleaned = cleaned.trim();
+
+  return cleaned;
+}
+
+/**
+ * Clean manually pasted JD text (exported for use in routes).
+ */
+export { cleanJdText };

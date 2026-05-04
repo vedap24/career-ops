@@ -50,60 +50,77 @@ export async function evaluateJob(jdText, cvContent, options = {}) {
     };
   }
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        temperature: 0.4,       // Deterministic enough for structured evaluation
-        maxOutputTokens: 8192,  // Full 7-block evaluation
-      },
-    });
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 8192,
+    },
+  });
 
-    // Build system prompt (mirrors gemini-eval.mjs exactly)
-    const systemPrompt = buildSystemPrompt(cvContent);
-    const userMessage = `\n\nJOB DESCRIPTION TO EVALUATE:\n\n${jdText}`;
+  const systemPrompt = buildSystemPrompt(cvContent);
+  const userMessage = `\n\nJOB DESCRIPTION TO EVALUATE:\n\n${jdText}`;
 
-    console.log(`[evaluator] Calling Gemini (${modelName})...`);
-    const startTime = Date.now();
+  // Retry with exponential backoff for rate limits
+  const MAX_RETRIES = 3;
+  const BACKOFF_DELAYS = [15_000, 30_000, 60_000]; // 15s, 30s, 60s
 
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: userMessage },
-    ]);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[evaluator] Calling Gemini (${modelName})${attempt > 0 ? ` — retry #${attempt}` : ''}...`);
+      const startTime = Date.now();
 
-    const rawText = result.response.text();
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[evaluator] Gemini responded in ${elapsed}s (${rawText.length} chars)`);
+      const result = await model.generateContent([
+        { text: systemPrompt },
+        { text: userMessage },
+      ]);
 
-    // Parse the structured response
-    const parsed = parseEvaluationResponse(rawText);
+      const rawText = result.response.text();
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`[evaluator] Gemini responded in ${elapsed}s (${rawText.length} chars)`);
 
-    return {
-      ok: true,
-      score: parsed.score,
-      archetype: parsed.archetype,
-      legitimacy: parsed.legitimacy,
-      blocks: parsed.blocks,
-      keywords: parsed.keywords,
-      raw: rawText,
-      model_used: modelName,
-    };
-  } catch (err) {
-    console.error(`[evaluator] Gemini API error:`, err.message);
+      const parsed = parseEvaluationResponse(rawText);
 
-    let errorMsg = 'Evaluation failed: ' + err.message;
-    if (err.message?.includes('API_KEY')) {
-      errorMsg = 'Invalid GEMINI_API_KEY. Check your .env file.';
-    } else if (err.message?.includes('quota') || err.message?.includes('rate')) {
-      errorMsg = 'Gemini rate limit hit. Wait 60 seconds and retry.';
+      return {
+        ok: true,
+        score: parsed.score,
+        archetype: parsed.archetype,
+        legitimacy: parsed.legitimacy,
+        blocks: parsed.blocks,
+        keywords: parsed.keywords,
+        raw: rawText,
+        model_used: modelName,
+      };
+    } catch (err) {
+      const isRateLimit = err.message?.includes('429') ||
+        err.message?.includes('quota') ||
+        err.message?.includes('rate') ||
+        err.message?.includes('RESOURCE_EXHAUSTED');
+
+      if (isRateLimit && attempt < MAX_RETRIES) {
+        const delay = BACKOFF_DELAYS[attempt];
+        console.warn(`[evaluator] Rate limited — waiting ${delay / 1000}s before retry #${attempt + 1}...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      console.error(`[evaluator] Gemini API error:`, err.message);
+
+      let errorMsg = 'Evaluation failed: ' + err.message;
+      if (err.message?.includes('API_KEY')) {
+        errorMsg = 'Invalid GEMINI_API_KEY. Check your .env file.';
+      } else if (isRateLimit) {
+        errorMsg = 'Gemini rate limit reached after retries. Please wait a minute and try again.';
+      }
+
+      return {
+        ok: false,
+        error: errorMsg,
+        unavailable: false,
+        rate_limited: isRateLimit || false,
+      };
     }
-
-    return {
-      ok: false,
-      error: errorMsg,
-      unavailable: false,
-    };
   }
 }
 

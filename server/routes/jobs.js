@@ -9,7 +9,7 @@
  */
 
 import { Router } from 'express';
-import { extractFromUrl } from '../services/extractor.js';
+import { extractFromUrl, cleanJdText } from '../services/extractor.js';
 import {
   createJob, getJob, listJobs,
   updateJobStatus, updateJobDetails, deleteJob,
@@ -48,7 +48,7 @@ router.post('/', async (req, res) => {
 
     if (manualJd) {
       // User provided JD text directly (fallback for failed extraction)
-      content = manualJd;
+      content = cleanJdText(manualJd);
     } else {
       // Try to extract from URL
       console.log(`[jobs] Extracting JD from: ${url}`);
@@ -136,7 +136,8 @@ router.patch('/:id', (req, res) => {
     // Update other fields if provided
     if (title !== undefined || company !== undefined || location !== undefined ||
         raw_jd !== undefined || extraction_ok !== undefined) {
-      updateJobDetails(id, { title, company, location, raw_jd, extraction_ok });
+      const cleanedJd = raw_jd !== undefined ? cleanJdText(raw_jd) : undefined;
+      updateJobDetails(id, { title, company, location, raw_jd: cleanedJd, extraction_ok });
     }
 
     const updated = getJob(id);
