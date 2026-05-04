@@ -21,7 +21,7 @@ const App = {
     document.getElementById('header').innerHTML = `
       <div class="container" style="display:flex;align-items:center;justify-content:space-between;height:60px">
         <div class="logo" onclick="location.hash='#/'">
-          <div class="logo-icon">🎯</div>
+          <img src="/favicon.svg" alt="Career-Ops" class="logo-icon" style="width:28px;height:28px">
           Career-Ops
         </div>
         <nav>

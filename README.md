@@ -1,115 +1,118 @@
-# Career-Ops MVP
+# Career-Ops
 
-AI-powered job evaluation and resume tailoring — paste a URL, get a detailed breakdown.
+**AI-Powered Job Evaluation & Resume Tailoring**
 
-> **Flagship workflow:** Paste one job URL → see extracted JD → run Career-Ops A-G evaluation → generate tailored resume draft → track application status.
+Paste a job posting URL → get a detailed A-G evaluation breakdown + tailored resume draft. Built for job seekers who want data-driven decisions, not spray-and-pray.
 
-## Quick Start
+🌐 **[Live Demo →](https://career-ops-try.vercel.app)**
 
-```bash
-# 1. Clone and install
-git clone <your-repo-url>
-cd careerOps-project
-npm install
+---
 
-# 2. Configure environment (optional — app works without Gemini key)
-cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY (free: https://aistudio.google.com/apikey)
+## What It Does
 
-# 3. Start the dev server
-npm run dev
-# → Opens at http://localhost:3000
-```
+1. **Paste a job URL** — Career-Ops extracts the job description automatically
+2. **Get a full evaluation** — 7-block A-G analysis: role match, CV gaps, comp data, interview prep, legitimacy check
+3. **Tailored resume** — AI generates a role-specific resume draft highlighting your strongest matches
+4. **Track everything** — Built-in application tracker with status management
 
-## What Works Without a Gemini API Key
+## Features
 
-| Feature | Without Key | With Key |
-|---------|-------------|----------|
-| URL intake + JD extraction | ✅ | ✅ |
-| Manual JD paste fallback | ✅ | ✅ |
-| Application tracker | ✅ | ✅ |
-| Status management | ✅ | ✅ |
-| A-G Evaluation | ❌ | ✅ |
-| Tailored resume generation | ❌ | ✅ |
-| Keyword extraction | ❌ | ✅ |
-
-## Architecture
-
-```
-careerOps-project/
-├── server/                  # Express backend
-│   ├── index.js             # Server entry point
-│   ├── routes/              # API routes (jobs, evaluate, resume, profile)
-│   ├── services/            # Business logic (extractor, evaluator, resume-builder)
-│   ├── prompts/             # LLM prompt context (from career-ops modes/)
-│   └── db/                  # SQLite schema and helpers
-├── public/                  # Frontend (vanilla HTML/CSS/JS)
-│   ├── index.html           # SPA shell
-│   ├── css/styles.css       # Design system (dark theme, glassmorphism)
-│   └── js/                  # Client-side app, pages, components
-└── docs/                    # Architecture and deployment notes
-```
-
-## API Routes
-
-| Method | Route | Description |
-|--------|-------|-------------|
-| `POST` | `/api/jobs` | Submit a job URL for extraction |
-| `GET` | `/api/jobs` | List tracked jobs |
-| `GET` | `/api/jobs/:id` | Get full job detail |
-| `PATCH` | `/api/jobs/:id` | Update status/details |
-| `DELETE` | `/api/jobs/:id` | Remove a job |
-| `POST` | `/api/jobs/:id/evaluate` | Run A-G evaluation |
-| `POST` | `/api/jobs/:id/resume` | Generate tailored resume |
-| `GET` | `/api/profile` | Get user profile |
-| `POST` | `/api/profile` | Save profile + CV |
-| `GET` | `/api/health` | Health check + Gemini status |
+| Feature | Description |
+|---------|-------------|
+| 🔗 **Smart JD Extraction** | Auto-extracts from Lever, Greenhouse, Ashby, Workday, and most career pages |
+| 🤖 **A-G Evaluation** | 7-block deep analysis: Role Summary, CV Match, Level Strategy, Comp, Personalization, Interview Prep, Legitimacy |
+| 📄 **Resume Tailoring** | Generates an ATS-optimized resume draft matched to the JD |
+| 📊 **Application Tracker** | Track jobs across saved → evaluated → applied → rejected |
+| ⚡ **Rate Limit Handling** | Auto-retry with backoff + fun AI quotes while waiting |
+| 📱 **Mobile Responsive** | Works perfectly on phone, tablet, and desktop |
+| 🔒 **Privacy First** | Your data stays local. No tracking, no analytics, no data sharing |
 
 ## Tech Stack
 
-- **Runtime:** Node.js 20+
-- **Server:** Express 4
-- **Database:** SQLite (better-sqlite3) — swappable to Turso for Vercel
-- **LLM:** Google Gemini (free tier, gemini-2.0-flash)
-- **JD Extraction:** @mozilla/readability + linkedom
-- **Frontend:** Vanilla HTML/CSS/JS (no build step)
+- **Frontend:** Vanilla HTML, CSS, JavaScript (no framework, no build step)
+- **Backend:** Node.js, Express
+- **AI/LLM:** Google Gemini API (gemini-2.0-flash)
+- **JD Extraction:** Mozilla Readability + LinkedOM
+- **Deployment:** Vercel
 
-## Evaluation System
+## Quick Start
 
-Uses the Career-Ops A-G scoring methodology:
+### Local Development
 
-| Block | What it evaluates |
-|-------|-------------------|
-| A | Role Summary — archetype, domain, seniority |
-| B | CV Match — requirement-to-experience mapping |
-| C | Level & Strategy — seniority positioning |
-| D | Comp & Demand — salary estimates, market demand |
-| E | Personalization Plan — CV tailoring suggestions |
-| F | Interview Prep — STAR+R stories mapped to JD |
-| G | Posting Legitimacy — ghost job detection |
+```bash
+# Clone the repo
+git clone https://github.com/vedap24/career-ops.git
+cd career-ops
 
-## Future Enhancements (v2)
+# Install dependencies
+npm install
 
-- PDF export (Playwright-based)
-- Multi-job batch scanning
-- Portal integration (Greenhouse, Lever, Ashby APIs)
-- Vercel deployment with Turso database
-- Interview prep module
+# Set up environment (optional — app works without Gemini key)
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY
 
-## Vercel Deployment Notes
+# Start the dev server
+npm run dev
+```
 
-The architecture is designed for future Vercel deployment:
-1. API routes map to `/api/*` serverless functions
-2. Database adapter pattern allows swapping SQLite → Turso
-3. Static frontend serves from CDN
-4. All secrets via environment variables
+Open [http://localhost:3000](http://localhost:3000) — that's it.
 
-See `docs/VERCEL_DEPLOY.md` for details.
+### Deploy to Vercel
 
-## Credits
+1. Fork this repo
+2. Go to [vercel.com/new](https://vercel.com/new) → Import your fork
+3. Add environment variable: `GEMINI_API_KEY` = your Gemini API key
+4. Deploy — done ✅
 
-Built on the evaluation methodology from [career-ops](https://github.com/santifer/career-ops).
+> **Without a Gemini API key:** URL intake, JD extraction, and tracking still work. Evaluation and resume tailoring are disabled until a key is added.
+
+## How It Works
+
+```
+User pastes URL → Server fetches page → Readability extracts JD
+                                        ↓
+                               JD saved to tracker
+                                        ↓
+                          User clicks "Evaluate" (optional)
+                                        ↓
+                      Gemini evaluates JD against user's CV
+                                        ↓
+                       7-block A-G evaluation + keywords
+                                        ↓
+                    User clicks "Generate Resume" (optional)
+                                        ↓
+                   Gemini tailors resume to match JD keywords
+```
+
+## Project Structure
+
+```
+career-ops/
+├── public/              # Frontend (vanilla HTML/CSS/JS)
+│   ├── index.html       # SPA entry point
+│   ├── css/styles.css   # Full design system
+│   └── js/              # Pages and components
+├── server/              # Backend (Express)
+│   ├── index.js         # Server entry
+│   ├── routes/          # API routes
+│   ├── services/        # Evaluator, extractor, resume builder
+│   ├── prompts/         # Gemini prompt templates
+│   └── db/              # In-memory data store
+├── vercel.json          # Vercel deployment config
+└── package.json
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | For AI features | Google Gemini API key ([Get one free](https://aistudio.google.com/apikey)) |
+| `PORT` | No | Server port (default: 3000) |
 
 ## License
 
 MIT
+
+---
+
+Built with ☕ and AI by [vedap24](https://github.com/vedap24)
