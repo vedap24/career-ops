@@ -62,10 +62,11 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// ─── Start Server ───────────────────────────────────────────────────
+// ─── Start Server (local only — Vercel uses the export) ─────────────
 
-app.listen(PORT, () => {
-  console.log(`
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`
 ╔══════════════════════════════════════════════════╗
 ║         career-ops MVP — Local Server            ║
 ╠══════════════════════════════════════════════════╣
@@ -73,5 +74,9 @@ app.listen(PORT, () => {
 ║  📡  API: http://localhost:${PORT}/api              ║
 ║  ${process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here' ? '🤖  Gemini: configured ✓' : '⚠️   Gemini: not configured (eval disabled)'}             ║
 ╚══════════════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
+}
+
+// Export for Vercel serverless
+export default app;
