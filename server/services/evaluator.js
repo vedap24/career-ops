@@ -59,8 +59,14 @@ export async function evaluateJob(jdText, cvContent, options = {}) {
     },
   });
 
-  const systemPrompt = buildSystemPrompt(cvContent);
-  const userMessage = `\n\nJOB DESCRIPTION TO EVALUATE:\n\n${jdText}`;
+  // Compress inputs to minimize token usage
+  const cleanJd = compressText(jdText, 6000);   // Cap JD at ~6000 chars
+  const cleanCv = compressText(cvContent, 4000); // Cap CV at ~4000 chars
+
+  console.log(`[evaluator] Token savings: JD ${jdText.length}→${cleanJd.length}, CV ${(cvContent||'').length}→${cleanCv.length}`);
+
+  const systemPrompt = buildSystemPrompt(cleanCv);
+  const userMessage = `\n\nJOB DESCRIPTION TO EVALUATE:\n\n${cleanJd}`;
 
   // Retry with exponential backoff for rate limits
   const MAX_RETRIES = 3;
@@ -284,4 +290,36 @@ function parseEvaluationResponse(rawText) {
  */
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Compress text to reduce token count before sending to Gemini.
+ * - Collapses multiple blank lines into one
+ * - Strips trailing whitespace per line
+ * - Normalizes multiple spaces to single space
+ * - Caps at maxChars
+ */
+function compressText(text, maxChars = 6000) {
+  if (!text) return '';
+
+  let compressed = text
+    // Normalize line endings
+    .replace(/\r\n/g, '\n')
+    // Collapse 2+ blank lines into one
+    .replace(/\n{3,}/g, '\n\n')
+    // Strip trailing whitespace per line
+    .split('\n')
+    .map(l => l.trimEnd())
+    .join('\n')
+    // Collapse multiple spaces (but preserve newlines)
+    .replace(/[ \t]{2,}/g, ' ')
+    // Trim overall
+    .trim();
+
+  // Cap length
+  if (compressed.length > maxChars) {
+    compressed = compressed.slice(0, maxChars) + '\n\n[...truncated]';
+  }
+
+  return compressed;
 }
